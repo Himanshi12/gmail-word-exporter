@@ -3,10 +3,9 @@ package com.example.gmailexcelexporter.service;
 import com.example.gmailexcelexporter.config.GmailProperties;
 import com.example.gmailexcelexporter.dto.EmailDto;
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -19,13 +18,11 @@ import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePartHeader;
 import org.springframework.stereotype.Service;
 
-import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.time.LocalDate;
@@ -81,17 +78,50 @@ public class GmailService {
 
     private Gmail createGmailClient() throws IOException, GeneralSecurityException {
         NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-        Credential credential = authorize(httpTransport);
+        Credential credential = getStoredCredential(httpTransport);
 
         return new Gmail.Builder(httpTransport, JSON_FACTORY, credential)
                 .setApplicationName(gmailProperties.getApplicationName())
                 .build();
     }
 
-    private Credential authorize(NetHttpTransport httpTransport) throws IOException {
+    public String createAuthorizationUrl(String redirectUri) throws IOException, GeneralSecurityException {
+        NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+        GoogleAuthorizationCodeFlow flow = createAuthorizationFlow(httpTransport);
+
+        return flow.newAuthorizationUrl()
+                .setRedirectUri(redirectUri)
+                .setAccessType("offline")
+                .set("prompt", "consent")
+                .build();
+    }
+
+    public void saveCredentialFromCode(String code, String redirectUri) throws IOException, GeneralSecurityException {
+        NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+        GoogleAuthorizationCodeFlow flow = createAuthorizationFlow(httpTransport);
+
+        GoogleTokenResponse tokenResponse = flow.newTokenRequest(code)
+                .setRedirectUri(redirectUri)
+                .execute();
+
+        flow.createAndStoreCredential(tokenResponse, USER);
+    }
+
+    private Credential getStoredCredential(NetHttpTransport httpTransport) throws IOException {
+        GoogleAuthorizationCodeFlow flow = createAuthorizationFlow(httpTransport);
+        Credential credential = flow.loadCredential(USER);
+
+        if (credential == null) {
+            throw new GmailAuthorizationRequiredException("Gmail account is not authorized. Open /api/gmail/auth-url first.");
+        }
+
+        return credential;
+    }
+
+    private GoogleAuthorizationCodeFlow createAuthorizationFlow(NetHttpTransport httpTransport) throws IOException {
         GoogleClientSecrets clientSecrets = loadClientSecrets();
 
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+        return new GoogleAuthorizationCodeFlow.Builder(
                 httpTransport,
                 JSON_FACTORY,
                 clientSecrets,
@@ -100,23 +130,6 @@ public class GmailService {
                 .setDataStoreFactory(new FileDataStoreFactory(new File(gmailProperties.getTokensDirectory())))
                 .setAccessType("offline")
                 .build();
-
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder()
-                .setPort(8888)
-                .build();
-
-        return new AuthorizationCodeInstalledApp(flow, receiver, authorizationUrl -> {
-            System.out.println();
-            System.out.println("==============================================================");
-            System.out.println("Open this Gmail authorization URL in your browser:");
-            System.out.println(authorizationUrl);
-            System.out.println("==============================================================");
-            System.out.println();
-
-            if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().browse(URI.create(authorizationUrl));
-            }
-        }).authorize("user");
     }
 
     private GoogleClientSecrets loadClientSecrets() throws IOException {

@@ -2,12 +2,15 @@ package com.example.gmailexcelexporter.controller;
 
 import com.example.gmailexcelexporter.dto.EmailExportRequest;
 import com.example.gmailexcelexporter.service.EmailExportService;
+import com.example.gmailexcelexporter.service.GmailAuthorizationRequiredException;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.LocalDate;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/emails")
@@ -69,5 +73,13 @@ public class EmailExportController {
                                 .toString()
                 )
                 .body(result.content());
+    }
+
+    @ExceptionHandler(GmailAuthorizationRequiredException.class)
+    public ResponseEntity<Map<String, String>> handleGmailAuthorizationRequired(
+            GmailAuthorizationRequiredException exception
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("message", exception.getMessage()));
     }
 }

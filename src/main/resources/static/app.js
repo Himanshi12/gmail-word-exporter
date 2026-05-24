@@ -32,6 +32,19 @@ form.addEventListener("submit", async (event) => {
     try {
         const response = await fetch(exportUrl);
 
+        if (response.status === 401) {
+            showStatus("Gmail authorization is required. Opening Google login...");
+            const authResponse = await fetch("/api/gmail/auth-url");
+
+            if (!authResponse.ok) {
+                throw new Error("Unable to create Gmail authorization URL.");
+            }
+
+            const authData = await authResponse.json();
+            window.location.href = authData.authorizationUrl;
+            return;
+        }
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(errorText || `Export failed with status ${response.status}`);
