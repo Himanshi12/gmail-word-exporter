@@ -9,20 +9,20 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePartHeader;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.security.GeneralSecurityException;
@@ -36,15 +36,14 @@ import java.util.List;
 @Service
 public class GmailService {
 
-    private static final GsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+    private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
+    private static final String CREDENTIALS_RESOURCE = "credentials.json";
     private static final String USER = "me";
 
     private final GmailProperties gmailProperties;
-    private final ResourceLoader resourceLoader;
 
-    public GmailService(GmailProperties gmailProperties, ResourceLoader resourceLoader) {
+    public GmailService(GmailProperties gmailProperties) {
         this.gmailProperties = gmailProperties;
-        this.resourceLoader = resourceLoader;
     }
 
     public List<EmailDto> fetchEmails(LocalDate startDate, LocalDate endDate)
@@ -88,23 +87,18 @@ public class GmailService {
     }
 
     private Credential authorize(NetHttpTransport httpTransport) throws IOException {
-        String credentialsPath = gmailProperties.getCredentialsPath();
+        InputStream in = getClass().getClassLoader().getResourceAsStream(CREDENTIALS_RESOURCE);
 
-        if (credentialsPath == null || credentialsPath.isBlank()) {
-            throw new IOException("Gmail credentials path is empty. Set gmail.credentials-path=classpath:credentials.json");
+        if (in == null) {
+            throw new IOException("Gmail credentials file not found on classpath. "
+                    + "Place credentials.json inside src/main/resources and rebuild the app.");
         }
 
-        Resource resource = resourceLoader.getResource(credentialsPath);
+        GoogleClientSecrets clientSecrets;
 
-        if (!resource.exists()) {
-            throw new IOException("Gmail credentials file not found: " + credentialsPath
-                    + ". Place credentials.json inside src/main/resources and restart the app.");
+        try (InputStreamReader reader = new InputStreamReader(in)) {
+            clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, reader);
         }
-
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(
-                JSON_FACTORY,
-                new InputStreamReader(resource.getInputStream())
-        );
 
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                 httpTransport,
