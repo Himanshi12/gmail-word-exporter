@@ -1,0 +1,19 @@
+# Maven target folder
+target/
+
+# OAuth credentials
+src/main/resources/credentials.json
+
+# Gmail OAuth tokens
+tokens/
+
+# Excel exports
+exports/
+
+# Eclipse files
+.classpath
+.project
+.settings/
+
+# Logs
+*.log
