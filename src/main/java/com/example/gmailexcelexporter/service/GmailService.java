@@ -24,7 +24,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -87,18 +89,7 @@ public class GmailService {
     }
 
     private Credential authorize(NetHttpTransport httpTransport) throws IOException {
-        InputStream in = getClass().getClassLoader().getResourceAsStream(CREDENTIALS_RESOURCE);
-
-        if (in == null) {
-            throw new IOException("Gmail credentials file not found on classpath. "
-                    + "Place credentials.json inside src/main/resources and rebuild the app.");
-        }
-
-        GoogleClientSecrets clientSecrets;
-
-        try (InputStreamReader reader = new InputStreamReader(in)) {
-            clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, reader);
-        }
+        GoogleClientSecrets clientSecrets = loadClientSecrets();
 
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                 httpTransport,
@@ -126,6 +117,27 @@ public class GmailService {
                 Desktop.getDesktop().browse(URI.create(authorizationUrl));
             }
         }).authorize("user");
+    }
+
+    private GoogleClientSecrets loadClientSecrets() throws IOException {
+        String googleCredentialsJson = System.getenv("GOOGLE_CREDENTIALS_JSON");
+
+        if (googleCredentialsJson != null && !googleCredentialsJson.isBlank()) {
+            try (StringReader reader = new StringReader(googleCredentialsJson)) {
+                return GoogleClientSecrets.load(JSON_FACTORY, reader);
+            }
+        }
+
+        InputStream in = getClass().getClassLoader().getResourceAsStream(CREDENTIALS_RESOURCE);
+
+        if (in == null) {
+            throw new IOException("Gmail credentials not found. Set GOOGLE_CREDENTIALS_JSON "
+                    + "or place credentials.json inside src/main/resources for local development.");
+        }
+
+        try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+            return GoogleClientSecrets.load(JSON_FACTORY, reader);
+        }
     }
 
     private String buildDateRangeQuery(LocalDate startDate, LocalDate endDate) {

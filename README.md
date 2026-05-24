@@ -54,25 +54,26 @@ If Eclipse shows `Unable to open JDBC Connection` or `The connection attempt fai
 2. Enable Gmail API.
 3. Create OAuth Client ID credentials for a Desktop app.
 4. Download the JSON credentials file.
-5. Rename it to:
+5. For local development, either set an environment variable:
+
+   ```text
+   GOOGLE_CREDENTIALS_JSON={"installed":...}
+   ```
+
+   Or rename the downloaded file to:
 
    ```text
    credentials.json
    ```
 
-6. Place it here:
+6. If using the file option, place it here:
 
    ```text
    src/main/resources/credentials.json
    ```
 
-The Gmail properties in `application.properties` should be:
-
-```properties
-gmail.credentials-path=classpath:credentials.json
-gmail.tokens-directory=tokens
-gmail.application-name=Gmail Excel Exporter
-```
+For hosted servers, use the `GOOGLE_CREDENTIALS_JSON` environment variable instead of packaging
+`credentials.json` inside the application.
 
 ## Run In Eclipse
 
