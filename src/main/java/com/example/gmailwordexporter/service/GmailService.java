@@ -1,7 +1,7 @@
-package com.example.gmailexcelexporter.service;
+package com.example.gmailwordexporter.service;
 
-import com.example.gmailexcelexporter.config.GmailProperties;
-import com.example.gmailexcelexporter.dto.EmailDto;
+import com.example.gmailwordexporter.config.GmailProperties;
+import com.example.gmailwordexporter.dto.EmailDto;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
@@ -15,7 +15,10 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.MessagePart;
+import com.google.api.services.gmail.model.MessagePartBody;
 import com.google.api.services.gmail.model.MessagePartHeader;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -25,10 +28,11 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 
@@ -40,19 +44,26 @@ public class GmailService {
     private static final String USER = "me";
 
     private final GmailProperties gmailProperties;
+    private final ZoneId exportZoneId;
 
-    public GmailService(GmailProperties gmailProperties) {
+    public GmailService(
+            GmailProperties gmailProperties,
+            @Value("${app.export-time-zone:Asia/Kolkata}") String exportTimeZone
+    ) {
         this.gmailProperties = gmailProperties;
+        this.exportZoneId = ZoneId.of(exportTimeZone);
     }
 
-    public List<EmailDto> fetchEmails(LocalDate startDate, LocalDate endDate)
+    public List<EmailDto> fetchEmails(LocalDateTime startDateTime, LocalDateTime endDateTime)
             throws IOException, GeneralSecurityException {
 
         System.out.println("Creating Gmail client...");
         Gmail gmail = createGmailClient();
-        String query = buildDateRangeQuery(startDate, endDate);
+        String query = buildDateRangeQuery(startDateTime, endDateTime);
         System.out.println("Gmail query: " + query);
 
+        long startMillis = toEpochMillis(startDateTime);
+        long endMillis = toEpochMillis(endDateTime);
         List<EmailDto> emails = new ArrayList<>();
         String pageToken = null;
 
@@ -66,7 +77,11 @@ public class GmailService {
 
             if (response.getMessages() != null) {
                 for (Message message : response.getMessages()) {
-                    emails.add(fetchEmail(gmail, message.getId()));
+                    EmailDto email = fetchEmail(gmail, message.getId(), startMillis, endMillis);
+
+                    if (email != null) {
+                        emails.add(email);
+                    }
                 }
             }
 
@@ -153,30 +168,124 @@ public class GmailService {
         }
     }
 
-    private String buildDateRangeQuery(LocalDate startDate, LocalDate endDate) {
+    private String buildDateRangeQuery(LocalDateTime startDateTime, LocalDateTime endDateTime) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
-        return "after:" + startDate.format(formatter)
-                + " before:" + endDate.plusDays(1).format(formatter);
+        return "after:" + startDateTime.toLocalDate().minusDays(1).format(formatter)
+                + " before:" + endDateTime.toLocalDate().plusDays(1).format(formatter);
     }
 
-    private EmailDto fetchEmail(Gmail gmail, String messageId) throws IOException {
+    private long toEpochMillis(LocalDateTime dateTime) {
+        return dateTime.atZone(exportZoneId).toInstant().toEpochMilli();
+    }
+
+    private EmailDto fetchEmail(Gmail gmail, String messageId, long startMillis, long endMillis) throws IOException {
         Message fullMessage = gmail.users()
                 .messages()
                 .get(USER, messageId)
-                .setFormat("metadata")
-                .setMetadataHeaders(Arrays.asList("From", "To", "Subject", "Date"))
+                .setFormat("full")
                 .execute();
+
+        Long internalDate = fullMessage.getInternalDate();
+
+        if (internalDate == null || internalDate < startMillis || internalDate > endMillis) {
+            return null;
+        }
 
         List<MessagePartHeader> headers = fullMessage.getPayload().getHeaders();
 
         return new EmailDto(
-                getHeader(headers, "From"),
+                extractEmailAddress(getHeader(headers, "From")),
                 getHeader(headers, "To"),
                 getHeader(headers, "Subject"),
                 getHeader(headers, "Date"),
-                fullMessage.getSnippet()
+                extractBody(fullMessage.getPayload())
         );
+    }
+
+    private String extractBody(MessagePart payload) {
+        String plainText = findBodyByMimeType(payload, "text/plain");
+
+        if (!plainText.isBlank()) {
+            return plainText;
+        }
+
+        String htmlText = findBodyByMimeType(payload, "text/html");
+
+        if (!htmlText.isBlank()) {
+            return htmlToText(htmlText);
+        }
+
+        return "";
+    }
+
+    private String findBodyByMimeType(MessagePart part, String mimeType) {
+        if (part == null) {
+            return "";
+        }
+
+        if (mimeType.equalsIgnoreCase(part.getMimeType())) {
+            String decodedBody = decodeBody(part.getBody());
+
+            if (!decodedBody.isBlank()) {
+                return decodedBody;
+            }
+        }
+
+        if (part.getParts() == null) {
+            return "";
+        }
+
+        for (MessagePart childPart : part.getParts()) {
+            String body = findBodyByMimeType(childPart, mimeType);
+
+            if (!body.isBlank()) {
+                return body;
+            }
+        }
+
+        return "";
+    }
+
+    private String decodeBody(MessagePartBody body) {
+        if (body == null || body.getData() == null || body.getData().isBlank()) {
+            return "";
+        }
+
+        byte[] decodedBytes = Base64.getUrlDecoder().decode(body.getData());
+        return new String(decodedBytes, StandardCharsets.UTF_8);
+    }
+
+    private String htmlToText(String html) {
+        return html
+                .replaceAll("(?is)<br\\s*/?>", "\n")
+                .replaceAll("(?is)</p>", "\n")
+                .replaceAll("(?is)<style.*?</style>", "")
+                .replaceAll("(?is)<script.*?</script>", "")
+                .replaceAll("(?is)<[^>]+>", "")
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replaceAll("[ \\t\\x0B\\f\\r]+", " ")
+                .trim();
+    }
+
+    private String extractEmailAddress(String fromHeader) {
+        if (fromHeader == null || fromHeader.isBlank()) {
+            return "";
+        }
+
+        int start = fromHeader.indexOf('<');
+        int end = fromHeader.indexOf('>');
+
+        if (start >= 0 && end > start) {
+            return fromHeader.substring(start + 1, end).trim();
+        }
+
+        return fromHeader.trim();
     }
 
     private String getHeader(List<MessagePartHeader> headers, String name) {

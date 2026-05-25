@@ -1,4 +1,4 @@
-package com.example.gmailexcelexporter.config;
+package com.example.gmailwordexporter.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -9,7 +9,7 @@ public class GmailProperties {
 
     private String credentialsPath = "classpath:credentials.json";
     private String tokensDirectory = "tokens";
-    private String applicationName = "Gmail Excel Exporter";
+    private String applicationName = "Gmail Word Exporter";
 
     public String getCredentialsPath() {
         return credentialsPath;

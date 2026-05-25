@@ -1,13 +1,13 @@
-package com.example.gmailexcelexporter;
+package com.example.gmailwordexporter;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class GmailExcelExporterApplication {
+public class GmailWordExporterApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(GmailExcelExporterApplication.class, args);
+        SpringApplication.run(GmailWordExporterApplication.class, args);
     }
 }
 

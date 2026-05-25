@@ -1,4 +1,4 @@
-package com.example.gmailexcelexporter.dto;
+package com.example.gmailwordexporter.dto;
 
 public class EmailDto {
 
@@ -6,14 +6,14 @@ public class EmailDto {
     private final String toAddress;
     private final String subject;
     private final String receivedDate;
-    private final String snippet;
+    private final String body;
 
-    public EmailDto(String fromAddress, String toAddress, String subject, String receivedDate, String snippet) {
+    public EmailDto(String fromAddress, String toAddress, String subject, String receivedDate, String body) {
         this.fromAddress = fromAddress;
         this.toAddress = toAddress;
         this.subject = subject;
         this.receivedDate = receivedDate;
-        this.snippet = snippet;
+        this.body = body;
     }
 
     public String getFromAddress() {
@@ -32,7 +32,7 @@ public class EmailDto {
         return receivedDate;
     }
 
-    public String getSnippet() {
-        return snippet;
+    public String getBody() {
+        return body;
     }
 }

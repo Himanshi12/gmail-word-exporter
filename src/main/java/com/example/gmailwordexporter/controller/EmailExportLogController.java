@@ -1,7 +1,7 @@
-package com.example.gmailexcelexporter.controller;
+package com.example.gmailwordexporter.controller;
 
-import com.example.gmailexcelexporter.entity.EmailExportLog;
-import com.example.gmailexcelexporter.repository.EmailExportLogRepository;
+import com.example.gmailwordexporter.entity.EmailExportLog;
+import com.example.gmailwordexporter.repository.EmailExportLogRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

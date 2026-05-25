@@ -1,8 +1,8 @@
-package com.example.gmailexcelexporter.controller;
+package com.example.gmailwordexporter.controller;
 
-import com.example.gmailexcelexporter.dto.EmailExportRequest;
-import com.example.gmailexcelexporter.service.EmailExportService;
-import com.example.gmailexcelexporter.service.GmailAuthorizationRequiredException;
+import com.example.gmailwordexporter.dto.EmailExportRequest;
+import com.example.gmailwordexporter.service.EmailWordExportService;
+import com.example.gmailwordexporter.service.GmailAuthorizationRequiredException;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -20,50 +20,50 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/emails")
-public class EmailExportController {
+public class EmailWordExportController {
 
-    private final EmailExportService emailExportService;
+    private final EmailWordExportService emailWordExportService;
 
-    public EmailExportController(EmailExportService emailExportService) {
-        this.emailExportService = emailExportService;
+    public EmailWordExportController(EmailWordExportService emailWordExportService) {
+        this.emailWordExportService = emailWordExportService;
     }
 
     @PostMapping("/export")
     public ResponseEntity<byte[]> exportEmails(@Valid @RequestBody EmailExportRequest request)
             throws IOException, GeneralSecurityException {
 
-        System.out.println("Export API called with startDate=" + request.getStartDate()
-                + ", endDate=" + request.getEndDate());
+        System.out.println("Export API called with startDateTime=" + request.getStartDateTime()
+                + ", endDateTime=" + request.getEndDateTime());
 
-        EmailExportService.EmailExportResult result = emailExportService.exportEmails(
-                request.getStartDate(),
-                request.getEndDate()
+        EmailWordExportService.EmailExportResult result = emailWordExportService.exportEmails(
+                request.getStartDateTime(),
+                request.getEndDateTime()
         );
 
-        return buildExcelResponse(result);
+        return buildWordResponse(result);
     }
 
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportEmailsByDateRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDateTime,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDateTime
     ) throws IOException, GeneralSecurityException {
 
-        System.out.println("Export API called with startDate=" + startDate + ", endDate=" + endDate);
+        System.out.println("Export API called with startDateTime=" + startDateTime + ", endDateTime=" + endDateTime);
 
-        EmailExportService.EmailExportResult result = emailExportService.exportEmails(startDate, endDate);
+        EmailWordExportService.EmailExportResult result = emailWordExportService.exportEmails(startDateTime, endDateTime);
 
-        return buildExcelResponse(result);
+        return buildWordResponse(result);
     }
 
-    private ResponseEntity<byte[]> buildExcelResponse(EmailExportService.EmailExportResult result) {
+    private ResponseEntity<byte[]> buildWordResponse(EmailWordExportService.EmailExportResult result) {
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
                 .contentLength(result.content().length)
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,

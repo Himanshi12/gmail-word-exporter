@@ -1,4 +1,4 @@
-package com.example.gmailexcelexporter.entity;
+package com.example.gmailwordexporter.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

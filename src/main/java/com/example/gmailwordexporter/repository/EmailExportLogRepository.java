@@ -1,6 +1,6 @@
-package com.example.gmailexcelexporter.repository;
+package com.example.gmailwordexporter.repository;
 
-import com.example.gmailexcelexporter.entity.EmailExportLog;
+import com.example.gmailwordexporter.entity.EmailExportLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

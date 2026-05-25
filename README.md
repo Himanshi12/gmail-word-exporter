@@ -1,6 +1,6 @@
-# Gmail Excel Exporter
+# Gmail Word Exporter
 
-Spring Boot application that reads Gmail messages for a selected date range and downloads them as an Excel file.
+Spring Boot application that reads Gmail messages for a selected date range and downloads them as a Word file.
 
 ## Import Into Eclipse
 
@@ -77,7 +77,7 @@ For hosted servers, use the `GOOGLE_CREDENTIALS_JSON` environment variable inste
 
 ## Run In Eclipse
 
-1. Open `GmailExcelExporterApplication.java`.
+1. Open `GmailWordExporterApplication.java`.
 2. Right-click the file.
 3. Select `Run As` > `Spring Boot App`.
 
@@ -100,12 +100,12 @@ Request body:
 
 ```json
 {
-  "startDate": "2026-05-01",
-  "endDate": "2026-05-23"
+  "startDateTime": "2026-05-01T09:00",
+  "endDateTime": "2026-05-23T18:30"
 }
 ```
 
-The response downloads an Excel `.xlsx` file.
+The response downloads a Word `.docx` file.
 
 ## View Export Logs
 

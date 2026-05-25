@@ -1,4 +1,4 @@
-package com.example.gmailexcelexporter.service;
+package com.example.gmailwordexporter.service;
 
 public class GmailAuthorizationRequiredException extends RuntimeException {
 

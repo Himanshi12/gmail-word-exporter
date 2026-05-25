@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gmail Excel Exporter</title>
+    <title>Gmail Word Exporter</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -16,25 +16,25 @@
                 <span class="gmail-right"></span>
             </div>
             <div>
-                <h1>Gmail Excel Exporter</h1>
-                <p>Select a duration and download Gmail messages as an Excel file.</p>
+                <h1>Gmail Word Exporter</h1>
+                <p>Select a duration and download Gmail messages as a Word file.</p>
             </div>
         </div>
 
         <form id="exportForm" class="export-form">
             <label>
-                Start date
-                <input id="startDate" type="date" required>
+                Start date and time
+                <input id="startDateTime" type="datetime-local" required>
             </label>
 
             <label>
-                End date
-                <input id="endDate" type="date" required>
+                End date and time
+                <input id="endDateTime" type="datetime-local" required>
             </label>
 
             <button id="exportButton" type="submit">
                 <span class="button-icon" aria-hidden="true"></span>
-                Get Gmail Excel
+                Get Gmail Word
             </button>
         </form>
 

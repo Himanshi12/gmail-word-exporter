@@ -1,6 +1,6 @@
-package com.example.gmailexcelexporter.controller;
+package com.example.gmailwordexporter.controller;
 
-import com.example.gmailexcelexporter.service.GmailService;
+import com.example.gmailwordexporter.service.GmailService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

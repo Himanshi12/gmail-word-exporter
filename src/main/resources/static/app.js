@@ -1,33 +1,35 @@
 const form = document.getElementById("exportForm");
-const startDateInput = document.getElementById("startDate");
-const endDateInput = document.getElementById("endDate");
+const startDateTimeInput = document.getElementById("startDateTime");
+const endDateTimeInput = document.getElementById("endDateTime");
 const exportButton = document.getElementById("exportButton");
 const statusMessage = document.getElementById("statusMessage");
 
-const today = new Date().toISOString().slice(0, 10);
-startDateInput.value = today;
-endDateInput.value = today;
+const now = new Date();
+const todayStart = new Date(now);
+todayStart.setHours(0, 0, 0, 0);
+startDateTimeInput.value = toDateTimeLocalValue(todayStart);
+endDateTimeInput.value = toDateTimeLocalValue(now);
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const startDate = startDateInput.value;
-    const endDate = endDateInput.value;
+    const startDateTime = startDateTimeInput.value;
+    const endDateTime = endDateTimeInput.value;
 
-    if (!startDate || !endDate) {
-        showStatus("Please select both dates.", "error");
+    if (!startDateTime || !endDateTime) {
+        showStatus("Please select both date and time values.", "error");
         return;
     }
 
-    if (endDate < startDate) {
-        showStatus("End date must be greater than or equal to start date.", "error");
+    if (endDateTime < startDateTime) {
+        showStatus("End date and time must be greater than or equal to start date and time.", "error");
         return;
     }
 
-    const exportUrl = `/api/emails/export?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+    const exportUrl = `/api/emails/export?startDateTime=${encodeURIComponent(startDateTime)}&endDateTime=${encodeURIComponent(endDateTime)}`;
 
     setLoading(true);
-    showStatus("Connecting to Gmail and preparing Excel file...");
+    showStatus("Connecting to Gmail and preparing Word file...");
 
     try {
         const response = await fetch(exportUrl);
@@ -52,10 +54,10 @@ form.addEventListener("submit", async (event) => {
 
         const blob = await response.blob();
         const fileName = getFileName(response.headers.get("Content-Disposition"))
-            || `gmail-emails-${startDate}-to-${endDate}.xlsx`;
+            || `gmail-emails-${safeFileDateTime(startDateTime)}-to-${safeFileDateTime(endDateTime)}.docx`;
 
         downloadBlob(blob, fileName);
-        showStatus("Excel file downloaded successfully.", "success");
+        showStatus("Word file downloaded successfully.", "success");
     } catch (error) {
         showStatus(error.message || "Unable to export Gmail messages.", "error");
     } finally {
@@ -88,11 +90,29 @@ function getFileName(contentDisposition) {
 function setLoading(isLoading) {
     exportButton.disabled = isLoading;
     exportButton.innerHTML = isLoading
-        ? '<span class="button-icon" aria-hidden="true"></span> Preparing Excel...'
-        : '<span class="button-icon" aria-hidden="true"></span> Get Gmail Excel';
+        ? '<span class="button-icon" aria-hidden="true"></span> Preparing Word...'
+        : '<span class="button-icon" aria-hidden="true"></span> Get Gmail Word';
 }
 
 function showStatus(message, type = "") {
     statusMessage.textContent = message;
     statusMessage.className = `status ${type}`.trim();
+}
+
+function toDateTimeLocalValue(date) {
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function safeFileDateTime(value) {
+    return value.replaceAll("-", "").replace("T", "-").replace(":", "");
+}
+
+function pad(value) {
+    return String(value).padStart(2, "0");
 }
